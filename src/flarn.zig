@@ -6,6 +6,8 @@ const Modelfile = @import("modelfile.zig");
 const FileFeeder = @import("feed.zig").FileFeeder;
 const interactive = @import("interactive.zig").interactive;
 
+const DOCS_URL = "https://github.com/dragsbruh/flarn";
+
 fn printProgress(completed: usize, total: usize, sequence: []const u8) void {
     std.debug.print("\r{d}/{d} ({s})", .{ completed, total, sequence });
 }
@@ -15,6 +17,7 @@ const Command = enum {
     train,
     run,
     it,
+    docs,
 };
 
 pub fn start(allocator: std.mem.Allocator) anyerror!void {
@@ -39,6 +42,7 @@ pub fn start(allocator: std.mem.Allocator) anyerror!void {
         .help => Commands.help(executable, command_args),
         .train => Commands.train(allocator, command_args),
         .run => Commands.run(allocator, command_args),
+        .docs => Commands.docs(allocator),
         .it => interactive(allocator, command_args),
     };
 }
@@ -148,6 +152,20 @@ const Commands = struct {
         while (try chain.generate(sequence)) |byte| {
             std.debug.print("{c}", .{byte});
             chain.shift(sequence, byte);
+        }
+    }
+
+    pub fn docs(allocator: std.mem.Allocator) !void {
+        const result = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{ "xdg-open", DOCS_URL },
+        }) catch |err| {
+            try io.stderr.print("failed to open url {s}: {any}\n", .{ DOCS_URL, err });
+            return err;
+        };
+
+        if (result.term != .Exited or result.term.Exited != 0) {
+            try io.stderr.print("xdg-open failed: {}\nurl is {s}\n", .{ result.term, DOCS_URL });
         }
     }
 };
