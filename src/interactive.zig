@@ -69,25 +69,25 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
             while (parts.next()) |arg| try arguments.append(allocator, arg);
 
             const command = std.meta.stringToEnum(Command, command_str) orelse {
-                try io.stderr.print("e|{s} is not a valid command\n", .{command_str});
+                try io.stderr.print("error: {s} is not a valid command\n", .{command_str});
                 continue;
             };
 
             // for now, only one argument that is id
             if (arguments.items.len != 1) {
-                try io.stderr.print("e|expected one integer argument\n", .{});
+                try io.stderr.print("error: expected one integer argument\n", .{});
                 continue;
             }
 
             const target = std.fmt.parseInt(usize, arguments.items[0], 10) catch {
-                try io.stderr.print("e|invalid integer for argument id: {s}\n", .{arguments.items[0]});
+                try io.stderr.print("error: invalid integer for argument id: {s}\n", .{arguments.items[0]});
                 continue;
             };
 
             switch (command) {
                 .c => {
                     if (tasks.contains(target)) {
-                        try io.stderr.print("e|task with id {d} already exists\n", .{target});
+                        try io.stderr.print("error: task with id {d} already exists\n", .{target});
                         continue;
                     }
 
