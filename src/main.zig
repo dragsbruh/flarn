@@ -1,3 +1,4 @@
+const std = @import("std");
 const start = @import("flarn.zig").start;
 
 pub fn main() !u8 {
@@ -11,5 +12,3 @@ pub fn main() !u8 {
     };
     return 0;
 }
-
-const std = @import("std");

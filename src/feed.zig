@@ -10,7 +10,11 @@ pub const FileFeeder = struct {
     buffer_size: usize,
     buffer_position: usize,
 
-    pub fn init(allocator: std.mem.Allocator, path: []const u8, buffer_size: usize) !FileFeeder {
+    pub fn init(
+        allocator: std.mem.Allocator,
+        path: []const u8,
+        buffer_size: usize,
+    ) !FileFeeder {
         const file = try std.fs.cwd().openFile(path, .{});
         const buffer = try allocator.alloc(u8, buffer_size);
 
@@ -40,8 +44,9 @@ pub const FileFeeder = struct {
         if (self.buffer_position >= self.buffer_size) {
             if (!try self.fill_buffer()) return null;
         }
-        std.debug.print("\r{d}/{d}", .{ self.fed_count + 1, self.file_size });
+
         self.fed_count += 1;
+
         defer self.buffer_position += 1;
         return self.buffer[self.buffer_position];
     }

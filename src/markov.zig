@@ -1,3 +1,6 @@
+const std = @import("std");
+const FileFeeder = @import("feed.zig").FileFeeder;
+
 pub const Node = struct {
     sequence: []const u8,
     weights: std.ArrayListUnmanaged(usize),
@@ -94,15 +97,17 @@ pub const Chain = struct {
         return try allocator.dupe(u8, self.nodes.items[index].sequence);
     }
 
-    pub fn train(self: *Chain, allocator: std.mem.Allocator, feed: *FileFeeder) !void {
-        const seq = try allocator.alloc(u8, self.depth);
-        defer allocator.free(seq);
+    pub fn train(self: *Chain, allocator: std.mem.Allocator, feed: *FileFeeder, seq: []u8) !?u8 {
+        // const seq = try allocator.alloc(u8, self.depth);
+        // defer allocator.free(seq);
 
-        while (try feed.next()) |byte| {
+        if (try feed.next()) |byte| {
             const node = try self.get_create_node(allocator, seq);
             try node.incrementWeight(allocator, byte);
             self.shift(seq, byte);
+            return byte;
         }
+        return null;
     }
 
     pub fn generate(self: *Chain, sequence: []const u8) !?u8 {
@@ -119,11 +124,94 @@ pub const Chain = struct {
         seq[seq.len - 1] = next;
     }
 
+    pub fn serialize(_: Chain, writer: std.io.AnyWriter) Serializer {
+        return Serializer{ .writer = writer };
+    }
+
+    pub fn deserialize(allocator: std.mem.Allocator, reader: std.io.AnyReader, status: ?*[]const u8) anyerror!Chain {
+        var magic: [4]u8 = undefined;
+        _ = try reader.read(&magic);
+        if (!std.mem.eql(u8, &magic, "FLRN")) {
+            if (status) |status_ptr| status_ptr.* = try allocator.dupe(u8, "expected FLRN magic bytes");
+            return error.InvalidFormat;
+        }
+
+        const depth = try reader.readInt(usize, .little);
+        const node_count = try reader.readInt(usize, .little);
+
+        var nodes = std.ArrayListUnmanaged(*Node).empty;
+
+        for (0..node_count) |i| {
+            const chars_count = try reader.readInt(usize, .little);
+
+            const seq_buffer = try allocator.alloc(u8, depth);
+            const read = try reader.read(seq_buffer);
+            if (read != seq_buffer.len) {
+                if (status) |status_ptr| status_ptr.* = try std.fmt.allocPrint(allocator, "unexpected sequence end in node {d}\n", .{i + 1});
+                return error.InvalidFormat;
+            }
+
+            const chars_buffer = try allocator.alloc(u8, chars_count);
+            const chars_read = try reader.read(chars_buffer);
+            if (chars_read != chars_buffer.len) {
+                if (status) |status_ptr| status_ptr.* = try std.fmt.allocPrint(allocator, "unexpected chars end in node {d}\n", .{i + 1});
+                return error.InvalidFormat;
+            }
+
+            const weights_buffer = try allocator.alloc(usize, chars_count);
+            for (0..chars_count) |ci| {
+                weights_buffer[ci] = try reader.readInt(usize, .little);
+            }
+
+            const node = try allocator.create(Node);
+            node.*.sequence = seq_buffer;
+            node.*.chars = std.ArrayListUnmanaged(u8).fromOwnedSlice(chars_buffer);
+            node.*.weights = std.ArrayListUnmanaged(usize).fromOwnedSlice(weights_buffer);
+
+            try nodes.append(allocator, node);
+        }
+
+        errdefer for (nodes.items) |node| node.*.deinit(allocator);
+
+        var end_buffer: [3]u8 = undefined;
+        _ = try reader.read(&end_buffer);
+        if (!std.mem.eql(u8, &end_buffer, "END")) {
+            if (status) |status_ptr| status_ptr.* = try allocator.dupe(u8, "expected END\n");
+            return error.InvalidFormat;
+        }
+
+        return Chain{
+            .depth = depth,
+            .nodes = nodes,
+        };
+    }
+
     pub fn deinit(self: *Chain, allocator: std.mem.Allocator) void {
         for (self.nodes.items) |node| node.deinit(allocator);
         self.nodes.deinit(allocator);
     }
 };
 
-const std = @import("std");
-const FileFeeder = @import("feed.zig").FileFeeder;
+pub const Serializer = struct {
+    writer: std.io.AnyWriter,
+
+    pub fn write_header(self: Serializer, chain: Chain) !void {
+        try self.writer.writeAll("FLRN"); // magic bytes, duh
+        try self.writer.writeInt(usize, chain.depth, .little);
+        try self.writer.writeInt(usize, chain.nodes.items.len, .little);
+    }
+
+    pub fn write_node(self: Serializer, node: *Node) !void {
+        try self.writer.writeInt(usize, node.*.chars.items.len, .little);
+        try self.writer.writeAll(node.*.sequence);
+        try self.writer.writeAll(node.*.chars.items);
+
+        for (node.*.weights.items) |weight| {
+            try self.writer.writeInt(usize, weight, .little);
+        }
+    }
+
+    pub fn write_footer(self: Serializer) !void {
+        try self.writer.writeAll("END");
+    }
+};

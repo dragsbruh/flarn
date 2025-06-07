@@ -1,0 +1,5 @@
+.{
+    .depth = 12,
+    .buffer_size = 8192,
+    .paths = .{"data/texts"},
+}
