@@ -8,10 +8,6 @@ const interactive = @import("interactive.zig").interactive;
 
 const DOCS_URL = "https://github.com/dragsbruh/flarn";
 
-fn printProgress(completed: usize, total: usize, sequence: []const u8) void {
-    std.debug.print("\r{d}/{d} ({s})", .{ completed, total, sequence });
-}
-
 const Command = enum {
     help,
     train,

@@ -6,3 +6,7 @@ data
 model.zon
 
 *.flrn
+
+# Added by goreleaser init:
+dist/
+.intentionally-empty-file.out
