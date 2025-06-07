@@ -53,8 +53,8 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
     defer allocator.free(token_buffer);
 
     while (true) {
-        var timeout: i32 = 0;
-        if (tasks.count() > 0) timeout = 10;
+        var timeout: i32 = 10;
+        if (tasks.count() > 0) timeout = 0;
         const n = std.os.linux.poll(&pollFds, 1, timeout);
         if (n > 0 and (pollFds[0].revents & std.os.linux.POLL.IN) != 0) {
             const line = try io.stdin.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
