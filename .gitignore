@@ -2,3 +2,5 @@
 zig-out
 
 .env
+data
+model.zon

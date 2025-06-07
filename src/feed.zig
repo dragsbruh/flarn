@@ -1,0 +1,53 @@
+const std = @import("std");
+
+pub const FileFeeder = struct {
+    file: std.fs.File,
+    file_size: usize,
+
+    fed_count: usize,
+
+    buffer: []u8,
+    buffer_size: usize,
+    buffer_position: usize,
+
+    pub fn init(allocator: std.mem.Allocator, path: []const u8, buffer_size: usize) !FileFeeder {
+        const file = try std.fs.cwd().openFile(path, .{});
+        const buffer = try allocator.alloc(u8, buffer_size);
+
+        var self = FileFeeder{
+            .file = file,
+            .file_size = @intCast(try file.getEndPos()),
+
+            .fed_count = 0,
+
+            .buffer = buffer,
+            .buffer_size = buffer_size,
+            .buffer_position = 0,
+        };
+        _ = try self.fill_buffer();
+        return self;
+    }
+
+    /// returns false if there is nothing more to read
+    fn fill_buffer(self: *FileFeeder) !bool {
+        self.buffer_position = 0;
+        const read = try self.file.read(self.buffer);
+        self.buffer_size = read;
+        return read != 0;
+    }
+
+    pub fn next(self: *FileFeeder) !?u8 {
+        if (self.buffer_position >= self.buffer_size) {
+            if (!try self.fill_buffer()) return null;
+        }
+        std.debug.print("\r{d}/{d}", .{ self.fed_count + 1, self.file_size });
+        self.fed_count += 1;
+        defer self.buffer_position += 1;
+        return self.buffer[self.buffer_position];
+    }
+
+    pub fn deinit(self: *FileFeeder, allocator: std.mem.Allocator) void {
+        allocator.free(self.buffer);
+        self.file.close();
+    }
+};
