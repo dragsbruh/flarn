@@ -51,7 +51,7 @@ const Commands = struct {
             \\available commands:
             \\  help                                displays this help message
             \\  train <modelfile> <outfile>         trains a model from modelfile and saves to outfile
-            \\  run <modelfile|model>               runs either a pretrained markov model (.flrn) or trains and runs a modelfile (.zon) if provided file is one.
+            \\  run <model>                         runs a pretrained markov model (.flrn)
             \\  it <model>                          runs flarn in interactive mode (not intended for cli usage, but as an api)
             \\  docs                                opens the github repository in a web browser
             \\
