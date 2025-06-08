@@ -52,6 +52,8 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
     var token_buffer = try allocator.alloc(u8, DEFAULT_TOKEN_SIZE);
     defer allocator.free(token_buffer);
 
+    var throttle: usize = 0;
+
     while (true) {
         var timeout: i32 = 10;
         if (tasks.count() > 0) timeout = 0;
@@ -108,6 +110,10 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
                     token_buffer = try allocator.realloc(token_buffer, target);
                     try io.stdout.print("t|{d}\n", .{target});
                 },
+                .l => {
+                    throttle = target;
+                    try io.stdout.print("l|{d}\n", .{target});
+                },
             }
         }
 
@@ -139,6 +145,10 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
                 _ = tasks.remove(entry.key_ptr.*);
             }
         }
+
+        if (throttle != 0) {
+            std.Thread.sleep(1000 * 1000 * throttle);
+        }
     }
 }
 
@@ -146,6 +156,7 @@ const Command = enum {
     c, // create
     s, // stop
     t, // set token size (default 4)
+    l, // throttle
 };
 
 pub fn escapeString(writer: anytype, input: []const u8) !void {
