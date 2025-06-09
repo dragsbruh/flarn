@@ -90,6 +90,7 @@ const Commands = struct {
                 allocator,
                 path,
                 modelfile.buffer_size,
+                modelfile.train_type,
             );
             defer feed.deinit(allocator);
 
@@ -98,7 +99,10 @@ const Commands = struct {
             const seq = try allocator.alloc(u8, chain.depth);
             defer allocator.free(seq);
 
-            while (try chain.train(allocator, &feed, seq)) |_| {
+            while (try chain.train(allocator, &feed, seq)) |byte| {
+                if (byte == 0) {
+                    for (0..seq.len) |i| seq[i] = 0;
+                }
                 child_bar.completeOne();
             }
         }
@@ -142,10 +146,11 @@ const Commands = struct {
         var chain = try markov.Chain.deserialize(allocator, file.reader().any(), &status);
         defer chain.deinit(allocator);
 
-        const sequence = try chain.random_sequence(allocator);
+        const sequence = try allocator.alloc(u8, chain.depth);
         defer allocator.free(sequence);
 
         while (try chain.generate(sequence)) |byte| {
+            if (byte == 0) break;
             std.debug.print("{c}", .{byte});
             chain.shift(sequence, byte);
         }

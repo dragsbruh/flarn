@@ -93,7 +93,7 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
                         continue;
                     }
 
-                    const seq = try chain.random_sequence(allocator);
+                    const seq = try allocator.alloc(u8, chain.depth);
                     try tasks.put(allocator, target, Task{
                         .sequence = seq,
                     });
@@ -126,6 +126,10 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
                 const maybe_byte = try chain.generate(entry.value_ptr.*.sequence);
 
                 if (maybe_byte) |byte| {
+                    if (byte == 0) {
+                        finished = true;
+                        break;
+                    }
                     valid += 1;
                     token_buffer[i] = byte;
                     chain.shift(entry.value_ptr.*.sequence, byte);

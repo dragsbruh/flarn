@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const TrainType = @import("modelfile.zig").TrainType;
+
 pub const FileFeeder = struct {
     file: std.fs.File,
     file_size: usize,
@@ -10,10 +12,13 @@ pub const FileFeeder = struct {
     buffer_size: usize,
     buffer_position: usize,
 
+    train_type: TrainType,
+
     pub fn init(
         allocator: std.mem.Allocator,
         path: []const u8,
         buffer_size: usize,
+        train_type: TrainType,
     ) !FileFeeder {
         const file = try std.fs.cwd().openFile(path, .{});
         const buffer = try allocator.alloc(u8, buffer_size);
@@ -27,6 +32,8 @@ pub const FileFeeder = struct {
             .buffer = buffer,
             .buffer_size = buffer_size,
             .buffer_position = 0,
+
+            .train_type = train_type,
         };
         _ = try self.fill_buffer();
         return self;
@@ -48,7 +55,14 @@ pub const FileFeeder = struct {
         self.fed_count += 1;
 
         defer self.buffer_position += 1;
-        return self.buffer[self.buffer_position];
+
+        const char = self.buffer[self.buffer_position];
+
+        if (self.train_type == .newline and char == '\n') {
+            return 0;
+        } else if (self.train_type == .word and char == ' ') {
+            return 0;
+        } else return char;
     }
 
     pub fn deinit(self: *FileFeeder, allocator: std.mem.Allocator) void {

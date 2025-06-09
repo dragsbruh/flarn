@@ -5,6 +5,7 @@ pub const Model = struct {
     depth: usize,
     paths: std.ArrayListUnmanaged([]const u8),
     buffer_size: usize,
+    train_type: TrainType,
 
     pub fn deinit(self: *Model, allocator: std.mem.Allocator) void {
         for (self.paths.items) |path| allocator.free(path);
@@ -34,6 +35,7 @@ pub fn load(allocator: std.mem.Allocator, modelfile_path: []const u8) !Model {
             depth: usize,
             buffer_size: usize,
             paths: []const []const u8,
+            train_type: TrainType,
         },
         allocator,
         source,
@@ -53,6 +55,7 @@ pub fn load(allocator: std.mem.Allocator, modelfile_path: []const u8) !Model {
         .depth = raw_model.depth,
         .buffer_size = raw_model.buffer_size,
         .paths = .empty,
+        .train_type = raw_model.train_type,
     };
 
     for (raw_model.paths) |path| {
@@ -83,3 +86,9 @@ pub fn load(allocator: std.mem.Allocator, modelfile_path: []const u8) !Model {
 
     return model;
 }
+
+pub const TrainType = enum {
+    newline,
+    none,
+    word,
+};
