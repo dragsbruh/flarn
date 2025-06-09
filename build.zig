@@ -15,6 +15,17 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
 
+    const git_tag = commandOutput(b, &.{ "git", "describe", "--tags", "--abbrev=0" }, "git tag") catch return;
+    const git_commit_hash = commandOutput(b, &.{ "git", "rev-parse", "HEAD" }, "git commit hash") catch return;
+    const git_commit_hash_short = git_commit_hash[0..@min(10, git_commit_hash.len)];
+
+    const exe_options = b.addOptions();
+
+    exe_options.addOption([]const u8, "tag", git_tag);
+    exe_options.addOption([]const u8, "commit_hash", git_commit_hash_short);
+
+    exe.root_module.addOptions("build_options", exe_options);
+
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
 
@@ -35,4 +46,13 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_exe_unit_tests.step);
+}
+
+fn commandOutput(b: *std.Build, command: []const []const u8, name: []const u8) ![]const u8 {
+    var exit_code: u8 = 0;
+    const output = b.runAllowFail(command, &exit_code, .Ignore) catch {
+        std.debug.print("failed to get {s}, exit code: {d}\n", .{ name, exit_code });
+        return error.Exit;
+    };
+    return std.mem.trim(u8, output, "\r\n");
 }

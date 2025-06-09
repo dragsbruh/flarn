@@ -6,6 +6,8 @@ const Modelfile = @import("modelfile.zig");
 const FileFeeder = @import("feed.zig").FileFeeder;
 const interactive = @import("interactive.zig").interactive;
 
+const build_options = @import("build_options");
+
 const DOCS_URL = "https://github.com/dragsbruh/flarn";
 
 const Command = enum {
@@ -14,6 +16,7 @@ const Command = enum {
     run,
     it,
     docs,
+    version,
 };
 
 pub fn start(allocator: std.mem.Allocator) anyerror!void {
@@ -40,6 +43,7 @@ pub fn start(allocator: std.mem.Allocator) anyerror!void {
         .run => Commands.run(allocator, command_args),
         .docs => Commands.docs(allocator),
         .it => interactive(allocator, command_args),
+        .version => Commands.version(),
     };
 }
 
@@ -168,5 +172,9 @@ const Commands = struct {
         if (result.term != .Exited or result.term.Exited != 0) {
             try io.stderr.print("xdg-open failed: {}\nurl is {s}\n", .{ result.term, DOCS_URL });
         }
+    }
+
+    pub fn version() !void {
+        std.debug.print("{s}\ncommit hash: {s}\n", .{ build_options.tag, build_options.commit_hash });
     }
 };
