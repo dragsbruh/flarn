@@ -148,10 +148,10 @@ pub fn interactive(allocator: std.mem.Allocator, args: []const []const u8) !void
                 allocator.free(entry.value_ptr.*.sequence);
                 _ = tasks.remove(entry.key_ptr.*);
             }
-        }
 
-        if (throttle != 0) {
-            std.Thread.sleep(1000 * 1000 * throttle);
+            if (throttle != 0) {
+                std.Thread.sleep(1000 * 1000 * throttle);
+            }
         }
     }
 }
